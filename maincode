@@ -1,0 +1,448 @@
+// RAILONEPRO
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct Train
+{
+    int trainNumber;
+    char trainName[50];
+    int sleeperSeats[50];
+    int acSeats[30];
+    int generalbooked;
+    int sleeperLEFT;
+    int acLEFT;
+    int sleeperWAITLEFT;
+    int acWAITLEFT;
+    int generalfare;
+    int sleeperfare;
+    int acfare;
+};
+
+struct Train p1[5] = {
+    {101, "HOWRAH RAJDHANI Express", {0}, {0}, 0, 50, 30, 10, 6,300,1050,2250},
+    {102, "SEALDAH RAJDHANI Express", {0}, {0}, 0, 50, 30, 10, 6,300,1000,2200},
+    {103, "COROMONDAL Express", {0}, {0}, 0, 50, 30, 10, 6,150,210,650},
+    {104, "NETAJI Express", {0}, {0}, 0, 50, 30, 10, 6,800,1110,2250},
+    {105, "TAMRALIPTA Express", {0}, {0}, 0, 50, 30, 10, 6,70,90,310}
+};
+
+
+struct Booking
+{
+    int pnr;
+    char passengerName[50];
+    int age;
+    int trainNumber;
+    int seatType; // 0 for General, 1 for Sleeper, 2 for AC
+    int seatNumber;
+    int fare;
+    int status; // 0 for confirmed, 1 for waitlisted
+    int refundamt;
+    struct Booking* next;
+};
+struct QueueNode
+{
+    struct Booking* passenger;
+    struct QueueNode* next;
+};
+
+struct Booking* head = NULL;
+int nextPNR=1001;
+
+void displayTrain()
+{
+    
+    for(int i=0;i<5;i++)
+    {
+        printf("------------------------------------------------------------\n");
+        printf("Train No: %d Train Name : %s\t Train Seats Left: %d\t AC SEAT LEFT: %d\t General Booked: %d\t Sleeper Waitlist Left: %d\t AC Waitlist Left: %d\n",p1[i].trainNumber,p1[i].trainName,p1[i].sleeperLEFT,p1[i].acLEFT,p1[i].generalbooked,p1[i].sleeperWAITLEFT,p1[i].acWAITLEFT);
+    }
+}
+
+void findTrain(int trainNumber)
+{
+    for(int i=0;i<5;i++)
+    {
+        if(p1[i].trainNumber == trainNumber)
+        {
+            printf("Train Found!\n");
+            printf("Train No: %d Train Name : %s\t Train Seats Left: %d\t AC SEAT LEFT: %d\t General Booked: %d\t Sleeper Waitlist Left: %d\t AC Waitlist Left: %d\n",p1[i].trainNumber,p1[i].trainName,p1[i].sleeperLEFT,p1[i].acLEFT,p1[i].generalbooked,p1[i].sleeperWAITLEFT,p1[i].acWAITLEFT);
+            return;
+        }
+    }
+    printf("Train Not Found!\n");
+}
+
+void checkBooking(int pnr)
+{
+    struct Booking* current = head;
+    while(current != NULL)
+    {
+        if(current->pnr == pnr)
+        {
+            printf("Booking Found! PNR: %d \n",current->pnr);
+            printf("Passenger Name: %s \n", current->passengerName);
+            printf("Age: %d \n", current->age);
+            printf("Train Number: %d \n", current->trainNumber);
+            printf("AMOUNT PAID: %d \n", current->fare);
+            printf("Status: %s \n", current->status == 0 ? "Confirmed" : "Waitlisted");
+            printf("Refund Amount: %d \n", current->refundamt);
+            if(current->seatType == 0)
+            {
+                printf("Seat Type: General\n");
+            }
+            else if(current->seatType == 1)
+            {
+                printf("Seat Type: Sleeper\n");
+            }
+            else if(current->seatType == 2)
+            {
+                printf("Seat Type: AC\n");
+            }
+            else
+            {
+                printf("Seat Type: Invalid\n");
+            }
+            return;
+        }
+        current = current->next;
+    }
+    printf("Booking Not Found!\n");
+}
+void bookTicket(int trainNumber, char* passengerName, int age, int seatType)
+{
+    struct Train* train = NULL;
+    for(int i=0;i<5;i++)
+    {
+        if(p1[i].trainNumber == trainNumber)
+        {
+            train = &p1[i];
+            break;
+        }
+    }
+    if(train == NULL)
+    {
+        printf("Train Not Found!\n");
+        return;
+    }
+    struct Booking* newBooking = (struct Booking*)malloc(sizeof(struct Booking));
+    newBooking->pnr = nextPNR++;
+    strcpy(newBooking->passengerName, passengerName);
+    newBooking->age = age;
+    newBooking->trainNumber = trainNumber;
+    newBooking->seatType = seatType;
+    newBooking->next = NULL;
+    int book=0;
+
+    if(seatType == 0) // General
+    {
+      
+            newBooking->seatNumber = train->generalbooked + 1;
+            newBooking->status = 0; 
+            newBooking->fare = train->generalfare;
+            newBooking->refundamt = 0;
+            train->generalbooked++;
+            printf("Ticket Booked! PNR: %d\n", newBooking->pnr);
+            book=1;
+       
+    }
+    else if(seatType == 1) // Sleeper
+    {
+        if(train->sleeperLEFT > 0)
+        {
+            newBooking->seatNumber = 50 - train->sleeperLEFT + 1;
+            newBooking->status = 0; 
+            newBooking->fare = train->sleeperfare;
+            newBooking->refundamt = 0;
+            train->sleeperLEFT--;
+            printf("Ticket Booked! PNR: %d\n", newBooking->pnr);
+            book=1;
+        }
+        else 
+        {
+            printf("No Sleeper Seats Left! Do you want to book waiting list(Confirm or 2x Refund)...\n");
+            printf("1. Yes\n2. No\n");
+            int choice;
+            scanf("%d",&choice);
+            if(choice == 1)
+            {
+                if(train->sleeperWAITLEFT > 0)
+                {
+                    newBooking->seatNumber = -1;
+                    newBooking->status = 1;
+                    newBooking->refundamt = 0;
+                    newBooking->fare = train->sleeperfare;
+                    train->sleeperWAITLEFT--;
+                    printf("Ticket Waitlisted! PNR: %d\n", newBooking->pnr);
+                    book=1;
+                }
+                else
+                {
+                    printf("No Sleeper Waitlist Left!\n");
+                    free(newBooking);
+                    return;
+                }
+            }
+            else
+            {
+                printf("Ticket Not Booked!\n");
+                free(newBooking);
+                return;
+            }
+        }
+    }
+    else if(seatType == 2) // AC
+    {
+        if(train->acLEFT > 0)
+        {
+            newBooking->seatNumber = 30 - train->acLEFT + 1;
+            newBooking->status = 0; 
+            newBooking->refundamt = 0;
+            newBooking->fare = train->acfare;
+            train->acLEFT--;
+            printf("Ticket Booked! PNR: %d\n", newBooking->pnr);
+            book=1;
+        }
+        else 
+        {
+            printf("No AC Seats Left! Do you want to book waiting list(Confirm or 2x Refund)...\n");
+            printf("1. Yes\n2. No\n");
+            int choice;
+            scanf("%d",&choice);
+            if(choice == 1)
+            {
+                if(train->acWAITLEFT > 0)
+                {
+                    newBooking->seatNumber = -1;
+                    newBooking->status = 1;
+                    newBooking->refundamt = 0;
+                    newBooking->fare = train->acfare;
+                    train->acWAITLEFT--;
+                    printf("Ticket Waitlisted! PNR: %d\n", newBooking->pnr);
+                    book=1;
+                }
+                else
+                {
+                    printf("No AC Waitlist Left!\n");
+                    free(newBooking);
+                    return;
+                }
+            }
+            else
+            {
+                printf("Ticket Not Booked!\n");
+                free(newBooking);
+                return;
+            }
+        }
+    }
+    else
+    {
+        printf("Invalid Seat Type!\n");
+        return;
+    }
+    if(book==1)
+    {
+        if(head == NULL)
+        {
+            head = newBooking;
+        }
+        else
+        {
+          while(head->next != NULL)
+          {
+              head = head->next;
+          }
+          head->next = newBooking;
+        }
+        checkBooking(newBooking->pnr);
+    }
+
+}
+void headelementdelete(int pnr)
+{
+    struct Booking* current = head;
+    //if head is to be deleted
+    if(current != NULL && current->pnr == pnr)
+    {
+        head = current->next;
+        free(current);
+        return;
+    }
+    //if middle or last node is to be deleted
+    while(current != NULL && current->next != NULL)
+    {
+       if(current->next->pnr == pnr)
+       {
+          struct Booking* temp = current->next;
+          current->next = temp->next;
+          free(temp);
+          return;
+       }
+       current = current->next;
+    } 
+}
+void waitingAddition(int trainNumber, int seatType)
+{
+    struct Booking* current = head;
+    while (current != NULL)
+    {
+        if(current->trainNumber == trainNumber && current->seatType == seatType && current->status == 1)
+        {
+            current->status = 0; 
+            current->refundamt = 0; 
+            printf("Waitlisted Ticket Confirmed! PNR: %d\n", current->pnr);
+            printf("Your seat has been confirmed. Seat No will be allocated at the station. Please check your PNR for details.\n");
+            return;
+        }
+        current = current->next;
+    }
+}
+
+void cancelTicketConfirmed(int pnr)
+{
+    struct Booking* current = head;
+    while (current != NULL)
+    {
+      if(current->pnr == pnr)
+      {
+         printf("Ticket Cancelled! PNR: %d\n", current->pnr);
+         current->status = 2;
+         int trnm=current->trainNumber;
+         for(int i=0;i<5;i++)
+         {
+            if(p1[i].trainNumber == trnm)
+            {
+                if(current->seatType == 1) // Sleeper
+                {
+                    p1[i].sleeperLEFT++;
+                }
+                else if(current->seatType == 2) // AC
+                {
+                    p1[i].acLEFT++;
+                }
+                else if(current->seatType == 0) // General
+                {
+                    p1[i].generalbooked--;
+                }
+                break;
+            }
+         }
+         current->refundamt = current->fare / 2; 
+         waitingAddition(current->trainNumber, current->seatType); 
+         headelementdelete(pnr);
+         return;
+      }
+      current = current->next;
+    }
+   
+}
+
+void cancelTicketWaitlisted(int pnr)
+{
+    struct Booking* current = head;
+    while (current != NULL)
+    {
+        if(current->pnr == pnr && current->status == 1)
+        {
+            printf("Waitlisted Ticket Cancelled! PNR: %d\n", current->pnr);
+            current->status = 2; 
+            int trnm=current->trainNumber;
+            for(int i=0;i<5;i++)
+            {
+                if(p1[i].trainNumber == trnm)
+                {
+                    if(current->seatType == 1) // Sleeper
+                    {
+                        p1[i].sleeperWAITLEFT++;
+                    }
+                    else if(current->seatType == 2) // AC
+                    {
+                        p1[i].acWAITLEFT++;
+                    }
+                    break;
+                }
+            }
+            current->refundamt = current->fare / 2;
+            headelementdelete(pnr); 
+            return;
+        }
+        current = current->next;
+    }
+}
+
+int main()
+{
+    printf("Welcome to RAILONEPRO - Train Ticket Booking System!\n");
+    printf("------------------------------------------------------------\n");
+    while(1)
+    {
+        printf("1. Display Train Details\n");
+        printf("2. Book Train Ticket\n");
+        printf("3. Check Booking Status\n");
+        printf("4. Cancel Confirmed Train Ticket\n");
+        printf("5. Cancel Waitlisted Train Ticket\n");
+        printf("6. Search Train using Train No \n");
+        printf("7. Exit\n");
+        int choice;
+        printf("Enter your choice: ");
+        scanf("%d",&choice);
+        if(choice==1)
+        {
+            displayTrain();
+        }
+        else if(choice==2)
+        {
+            int trainNumber, age, seatType;
+            char passengerName[50];
+            printf("Enter Train Number: ");
+            scanf("%d", &trainNumber);
+            printf("Enter Passenger Name: ");
+            scanf("%s", passengerName);
+            printf("Enter Age: ");
+            scanf("%d", &age);
+            printf("Enter Seat Type (0 for General, 1 for Sleeper, 2 for AC): ");
+            scanf("%d", &seatType);
+            bookTicket(trainNumber, passengerName, age, seatType);
+        }
+        else if(choice==3)
+        {
+            int pnr;
+            printf("Enter PNR Number: ");
+            scanf("%d", &pnr);
+            checkBooking(pnr);
+        }
+        else if(choice==4)
+        {
+            int pnr;
+            printf("Enter PNR Number to Cancel Confirmed Ticket: ");
+            scanf("%d", &pnr);
+            cancelTicketConfirmed(pnr);
+        }
+        else if(choice==5)
+        {
+            int pnr;
+            printf("Enter PNR Number to Cancel Waitlisted Ticket: ");
+            scanf("%d", &pnr);
+            cancelTicketWaitlisted(pnr);
+        }
+        else if(choice==6)
+        {
+            int trainNumber;
+            printf("Enter Train Number to Search: ");
+            scanf("%d", &trainNumber);
+            findTrain(trainNumber);
+        }
+        else if(choice==7)
+        {
+            printf("Exiting the system. Thank you for using RAILONEPRO!\n");
+            break;
+        }
+        else
+        {
+            printf("Invalid Choice!\n");
+        }
+    }
+
+}
